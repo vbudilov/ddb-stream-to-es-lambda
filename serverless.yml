@@ -1,0 +1,31 @@
+service: ddb-stream-to-es
+
+provider:
+  name: aws
+  runtime: java11
+  stage: prd
+  region: us-east-1
+  timeout: 20
+  logRetentionInDays: 7
+  iamManagedPolicies:
+  - 'arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess'
+  - 'arn:aws:iam::aws:policy/AmazonSSMFullAccess'
+  - 'arn:aws:iam::aws:policy/AWSLambdaFullAccess'
+  - 'arn:aws:iam::aws:policy/AmazonESFullAccess'
+
+package:
+  artifact: build/libs/ddb-stream-to-es-lambda-prd-all.jar
+
+functions:
+  UserPropagationLambda:
+    handler: com.budilov.data.DynamoDBStreamLambda
+    memorySize: 512
+    provisionedConcurrency: 1
+    events:
+      - stream:
+          arn: ${ssm:/ccUsersTableStreamArn}
+          batchSize: 100
+          startingPosition: LATEST
+          maximumRetryAttempts: 10
+    environment:
+      esUrl: ${ssm:/ccEsDomainEndpoint}
